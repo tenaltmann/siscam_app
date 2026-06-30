@@ -1,0 +1,76 @@
+creativeWritingPad { <markdown># ==========================================
+# Ambiente Virtual e Dependências
+# ==========================================
+.venv/
+venv/
+ENV/
+env/
+ENV_DIR/
+bin/
+lib/
+share/
+include/
+pyvenv.cfg
+pip-selfcheck.json
+
+# ==========================================
+# Caches do Python e Compilação
+# ==========================================
+**/__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+
+# ==========================================
+# Arquivos de IDEs e Editores
+# ==========================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# ==========================================
+# Interface Gráfica (Qt / PySide)
+# ==========================================
+# Ignora arquivos temporários gerados pelo Qt Designer se houver
+*.bak
+# Opcional: Ignorar os arquivos .py gerados automaticamente a partir de arquivos .ui
+# Se você preferir manter os arquivos .py gerados no repositório, comente a linha abaixo
+# *_ui.py
+
+# ==========================================
+# Banco de Dados Local (Desenvolvimento/Testes)
+# ==========================================
+*.db
+*.sqlite
+*.sqlite3
+
+# ==========================================
+# Geração de Executáveis (PyInstaller / Nuitka)
+# ==========================================
+build/
+dist/
+*.spec
+*.exe
+.nuitka/
+
+# ==========================================
+# Relatórios Locais e Arquivos Temporários
+# ==========================================
+*.pdf
+*.xlsx
+*.xls
+*.csv
+logs/
+*.log
+
+# ==========================================
+# Configurações Locais / Variáveis de Ambiente
+# ==========================================
+.env
+.env.local
+</markdown> }

@@ -1,3 +1,4 @@
+from app.views.management_view import ManagementView
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
     QTabWidget, QLabel, QPushButton, QFrame
@@ -58,10 +59,14 @@ class MainView(QMainWindow):
         # Inicializando os layouts de cada aba
         self.setup_aba_dashboard()
         self.setup_aba_portaria()
+
+        self.aba_gerenciamento = ManagementView(self.om_service)
         
         # Adicionando as abas ao componente principal
         self.abas.addTab(self.aba_dashboard, "📊 Dashboard")
         self.abas.addTab(self.aba_portaria, "🚗 Controle de Portaria")
+        
+        self.abas.addTab(self.aba_gerenciamento, "⚙️ Gerenciamento")
         
         layout_principal.addWidget(self.abas)
         self.setCentralWidget(widget_central)

@@ -1,16 +1,25 @@
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableWidget, 
     QTableWidgetItem, QPushButton, QLabel, QLineEdit, 
-    QHeaderView, QAbstractItemView, QComboBox
+    QHeaderView, QAbstractItemView, QComboBox, QMessageBox
 )
 from PySide6.QtCore import Qt
 from app.services.om_service import OMService
+
+# Importação dos novos modais que criamos
+from app.views.militar_dialog import MilitarDialog
+from app.views.viatura_dialog import ViaturaDialog
+
+# Importação dos modelos para consulta
+from app.models.models import UsuarioMilitar, Veiculo
 
 class ManagementView(QWidget):
     def __init__(self, om_service: OMService):
         super().__init__()
         self.om_service = om_service
+        self.db = om_service.session  # Reaproveita a sessão de banco do serviço
         self.setup_ui()
+        self.carregar_dados_reais()   # Agora carregamos os dados do banco
 
     def setup_ui(self):
         """Estrutura a interface de gerenciamento de militares e viaturas."""
@@ -32,12 +41,14 @@ class ManagementView(QWidget):
         barra_militares = QHBoxLayout()
         self.txt_busca_militar = QLineEdit()
         self.txt_busca_militar.setPlaceholderText("Buscar militar por nome ou identidade...")
+        self.txt_busca_militar.textChanged.connect(self.carregar_dados_reais) # Busca em tempo real
         
         self.btn_novo_militar = QPushButton("+ Cadastrar Militar")
         self.btn_novo_militar.setStyleSheet(
             "QPushButton { background-color: #27ae60; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; }"
             "QPushButton:hover { background-color: #2ecc71; }"
         )
+        self.btn_novo_militar.clicked.connect(self.abrir_cadastro_militar) # Conecta o botão
         
         barra_militares.addWidget(self.txt_busca_militar)
         barra_militares.addWidget(self.btn_novo_militar)
@@ -46,7 +57,7 @@ class ManagementView(QWidget):
         # Tabela de Militares
         self.tabela_militares = QTableWidget()
         self.tabela_militares.setColumnCount(4)
-        self.tabela_militares.setHorizontalHeaderLabels(["Identidade", "Posto/Grad", "Nome Completo", "Status"])
+        self.tabela_militares.setHorizontalHeaderLabels(["Identidade", "Nome Completo", "Possui Veículo", "Status"])
         self.tabela_militares.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabela_militares.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tabela_militares.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
@@ -61,12 +72,14 @@ class ManagementView(QWidget):
         barra_viaturas = QHBoxLayout()
         self.txt_busca_viatura = QLineEdit()
         self.txt_busca_viatura.setPlaceholderText("Buscar viatura por placa ou modelo...")
+        self.txt_busca_viatura.textChanged.connect(self.carregar_dados_reais) # Busca em tempo real
         
         self.btn_nova_viatura = QPushButton("+ Cadastrar Viatura")
         self.btn_nova_viatura.setStyleSheet(
             "QPushButton { background-color: #2980b9; color: white; font-weight: bold; padding: 5px 10px; border-radius: 4px; }"
             "QPushButton:hover { background-color: #3498db; }"
         )
+        self.btn_nova_viatura.clicked.connect(self.abrir_cadastro_viatura) # Conecta o botão
         
         barra_viaturas.addWidget(self.txt_busca_viatura)
         barra_viaturas.addWidget(self.btn_nova_viatura)
@@ -75,27 +88,60 @@ class ManagementView(QWidget):
         # Tabela de Viaturas
         self.tabela_viaturas = QTableWidget()
         self.tabela_viaturas.setColumnCount(4)
-        self.tabela_viaturas.setHorizontalHeaderLabels(["Placa", "Modelo", "Tipo", "Localização"])
+        self.tabela_viaturas.setHorizontalHeaderLabels(["Placa", "Modelo", "Tipo", "ID Proprietário"])
         self.tabela_viaturas.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
         self.tabela_viaturas.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
         self.tabela_viaturas.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         layout_principal.addWidget(self.tabela_viaturas)
 
-        # Inicializa as tabelas com placeholders visuais
-        self.carregar_dados_mock()
+    def carregar_dados_reais(self):
+        """Busca os dados do banco SQLite filtrando por termos digitados na busca."""
+        try:
+            # 1. Carregar Militares
+            busca_mil = self.txt_busca_militar.text().strip()
+            query_mil = self.db.query(UsuarioMilitar)
+            if busca_mil:
+                query_mil = query_mil.filter(
+                    (UsuarioMilitar.nome_completo.like(f"%{busca_mil}%")) | 
+                    (UsuarioMilitar.rg.like(f"%{busca_mil}%"))
+                )
+            militares = query_mil.all()
+            
+            self.tabela_militares.setRowCount(len(militares))
+            for i, mil in enumerate(militares):
+                self.tabela_militares.setItem(i, 0, QTableWidgetItem(mil.rg))
+                self.tabela_militares.setItem(i, 1, QTableWidgetItem(mil.nome_completo))
+                self.tabela_militares.setItem(i, 2, QTableWidgetItem("Sim" if mil.possui_veiculo else "Não"))
+                self.tabela_militares.setItem(i, 3, QTableWidgetItem("Ativo" if mil.esta_ativo else "Inativo"))
 
-    def carregar_dados_mock(self):
-        """Insere linhas temporárias para validação visual do layout."""
-        # Mock Militares
-        self.tabela_militares.setRowCount(1)
-        self.tabela_militares.setItem(0, 0, QTableWidgetItem("123456789-0"))
-        self.tabela_militares.setItem(0, 1, QTableWidgetItem("Capitão"))
-        self.tabela_militares.setItem(0, 2, QTableWidgetItem("Caxias da Silva"))
-        self.tabela_militares.setItem(0, 3, QTableWidgetItem("Interno"))
+            # 2. Carregar Viaturas / Veículos
+            busca_via = self.txt_busca_viatura.text().strip()
+            query_via = self.db.query(Veiculo)
+            if busca_via:
+                query_via = query_via.filter(
+                    (Veiculo.placa.like(f"%{busca_via}%")) | 
+                    (Veiculo.modelo.like(f"%{busca_via}%"))
+                )
+            viaturas = query_via.all()
 
-        # Mock Viaturas
-        self.tabela_viaturas.setRowCount(1)
-        self.tabela_viaturas.setItem(0, 0, QTableWidgetItem("EB-12345"))
-        self.tabela_viaturas.setItem(0, 1, QTableWidgetItem("Marruá AM21"))
-        self.tabela_viaturas.setItem(0, 2, QTableWidgetItem("Operacional"))
-        self.tabela_viaturas.setItem(0, 3, QTableWidgetItem("Na OM"))
+            self.tabela_viaturas.setRowCount(len(viaturas))
+            for i, via in enumerate(viaturas):
+                self.tabela_viaturas.setItem(i, 0, QTableWidgetItem(via.placa))
+                self.tabela_viaturas.setItem(i, 1, QTableWidgetItem(via.modelo))
+                self.tabela_viaturas.setItem(i, 2, QTableWidgetItem(via.tipo))
+                self.tabela_viaturas.setItem(i, 3, QTableWidgetItem(str(via.proprietario_id)[:8] + "..."))
+
+        except Exception as e:
+            QMessageBox.critical(self, "Erro", f"Erro ao atualizar tabelas: {e}")
+
+    def abrir_cadastro_militar(self):
+        """Abre o modal flutuante e recarrega a tabela se o usuário salvou os dados."""
+        dialog = MilitarDialog(self.db, self)
+        if dialog.exec() == MilitarDialog.DialogCode.Accepted:
+            self.carregar_dados_reais()
+
+    def abrir_cadastro_viatura(self):
+        """Abre o modal flutuante e recarrega a tabela se o usuário salvou os dados."""
+        dialog = ViaturaDialog(self.db, self)
+        if dialog.exec() == ViaturaDialog.DialogCode.Accepted:
+            self.carregar_dados_reais()

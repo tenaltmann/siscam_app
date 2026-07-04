@@ -102,3 +102,43 @@ class LogSistema(Base):
     mensagem: Mapped[str] = mapped_column(Text, nullable=False)
     usuario_id: Mapped[Optional[str]] = mapped_column(String(36), ForeignKey("usuarios_militares.id"), nullable=True)
     exception: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+
+
+
+class RegistroAcesso(Base):
+    __tablename__ = 'registros_acesso'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    militar_id = Column(Integer, ForeignKey('usuarios_militares.id'), nullable=False)
+    
+    # Tipo de movimentação: 'ENTRADA' ou 'SAÍDA'
+    tipo = Column(String(10), nullable=False)
+    data_hora = Column(DateTime, default=datetime.utcnow, nullable=False)
+    
+    # Observações (ex: "Saiu de dispensa", "Entrada para o serviço")
+    observacao = Column(String(255), nullable=True)
+
+    # Relacionamento para conseguir buscar os dados do militar facilmente depois
+    militar = relationship("UsuarioMilitar")
+
+
+class RegistroViatura(Base):
+    __tablename__ = 'registros_viatura'
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    
+    # Se o sistema aceitar viaturas civis/externas no futuro, a placa pode ser String direta. 
+    # Para viaturas da OM, podemos associar ou manter histórico textual.
+    viatura_placa = Column(String(20), nullable=False) 
+    motorista_id = Column(Integer, ForeignKey('usuarios_militares.id'), nullable=False)
+    chefe_viatura_id = Column(Integer, ForeignKey('usuarios_militares.id'), nullable=True)
+    
+    tipo = Column(String(10), nullable=False) # 'ENTRADA' ou 'SAÍDA'
+    data_hora = Column(DateTime, default=datetime.utcnow, nullable=False)
+    odometro = Column(Integer, nullable=True) # Quilometragem da viatura
+    destino = Column(String(150), nullable=True)
+
+    # Relacionamentos
+    motorista = relationship("UsuarioMilitar", foreign_keys=[motorista_id])
+    chefe_viatura = relationship("UsuarioMilitar", foreign_keys=[chefe_viatura_id])

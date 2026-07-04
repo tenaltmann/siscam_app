@@ -1,7 +1,9 @@
 from app.views.management_view import ManagementView
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, 
-    QTabWidget, QLabel, QPushButton, QFrame, QLineEdit, QComboBox, QMessageBox
+    QTabWidget, QLabel, QPushButton, QFrame, QLineEdit, 
+    QComboBox, QMessageBox, QTableWidget, QTableWidgetItem,
+    QHeaderView, QAbstractItemView
 )
 from PySide6.QtCore import Qt
 from app.services.om_service import OMService
@@ -128,7 +130,100 @@ class MainView(QMainWindow):
         layout.addStretch() # Empurra tudo para cima
 
     def setup_aba_portaria(self):
-        """Estrutura o formulário de controle de acesso para Militares e Viaturas."""
+        """Estrutura o formulário de controle de acesso e tabelas de histórico recente."""
+        layout_principal = QHBoxLayout(self.aba_portaria)
+        layout_principal.setContentsMargins(20, 20, 20, 20)
+        layout_principal.setSpacing(20)
+
+        # --- PAINEL ESQUERDO: CONTROLE DE MILITARES ---
+        painel_militar = QFrame()
+        painel_militar.setStyleSheet("QFrame { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; }")
+        layout_mil = QVBoxLayout(painel_militar)
+        
+        lbl_tit_mil = QLabel("👥 Movimentação de Militar")
+        lbl_tit_mil.setStyleSheet("font-size: 15px; font-weight: bold; color: #2c3e50; border: none;")
+        layout_mil.addWidget(lbl_tit_mil)
+
+        layout_mil.addWidget(QLabel("ID do Militar:"))
+        self.txt_militar_id = QLineEdit()
+        self.txt_militar_id.setPlaceholderText("Cole o UUID do militar aqui...")
+        layout_mil.addWidget(self.txt_militar_id)
+
+        layout_mil.addWidget(QLabel("Tipo de Acesso:"))
+        self.cb_tipo_militar = QComboBox()
+        self.cb_tipo_militar.addItems(["ENTRADA", "SAÍDA"])
+        layout_mil.addWidget(self.cb_tipo_militar)
+
+        layout_mil.addWidget(QLabel("Observação / Motivo:"))
+        self.txt_obs_militar = QLineEdit()
+        layout_mil.addWidget(self.txt_obs_militar)
+
+        self.btn_salvar_militar = QPushButton("Registrar Acesso Militar")
+        self.btn_salvar_militar.setStyleSheet(
+            "QPushButton { background-color: #27ae60; color: white; font-weight: bold; padding: 8px; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #2ecc71; }"
+        )
+        self.btn_salvar_militar.clicked.connect(self.processar_acesso_militar)
+        layout_mil.addWidget(self.btn_salvar_militar)
+        
+        # Histórico de Militares
+        layout_mil.addWidget(QLabel("<b>Últimos Acessos (Militares):</b>"))
+        self.tabela_hist_militar = QTableWidget()
+        self.tabela_hist_militar.setColumnCount(3)
+        self.tabela_hist_militar.setHorizontalHeaderLabels(["Militar (ID)", "Tipo", "Hora"])
+        self.tabela_hist_militar.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.tabela_hist_militar.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        layout_mil.addWidget(self.tabela_hist_militar)
+
+        # --- PAINEL DIREITO: CONTROLE DE VIATURAS ---
+        painel_viatura = QFrame()
+        painel_viatura.setStyleSheet("QFrame { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; }")
+        layout_via = QVBoxLayout(painel_viatura)
+
+        lbl_tit_via = QLabel("🚗 Movimentação de Viatura")
+        lbl_tit_via.setStyleSheet("font-size: 15px; font-weight: bold; color: #2c3e50; border: none;")
+        layout_via.addWidget(lbl_tit_via)
+
+        layout_via.addWidget(QLabel("Placa da Viatura:"))
+        self.txt_via_placa = QLineEdit()
+        layout_via.addWidget(self.txt_via_placa)
+
+        layout_via.addWidget(QLabel("ID do Motorista (Militar):"))
+        self.txt_via_motorista = QLineEdit()
+        layout_via.addWidget(self.txt_via_motorista)
+
+        layout_via.addWidget(QLabel("Tipo de Acesso:"))
+        self.cb_tipo_viatura = QComboBox()
+        self.cb_tipo_viatura.addItems(["ENTRADA", "SAÍDA"])
+        layout_via.addWidget(self.cb_tipo_viatura)
+
+        layout_via.addWidget(QLabel("Destino / Missão:"))
+        self.txt_via_destino = QLineEdit()
+        layout_via.addWidget(self.txt_via_destino)
+
+        self.btn_salvar_viatura = QPushButton("Registrar Acesso Viatura")
+        self.btn_salvar_viatura.setStyleSheet(
+            "QPushButton { background-color: #2980b9; color: white; font-weight: bold; padding: 8px; border-radius: 4px; }"
+            "QPushButton:hover { background-color: #3498db; }"
+        )
+        self.btn_salvar_viatura.clicked.connect(self.processar_acesso_viatura)
+        layout_via.addWidget(self.btn_salvar_viatura)
+        
+        # Histórico de Viaturas
+        layout_via.addWidget(QLabel("<b>Últimos Acessos (Viaturas):</b>"))
+        self.tabela_hist_viatura = QTableWidget()
+        self.tabela_hist_viatura.setColumnCount(3)
+        self.tabela_hist_viatura.setHorizontalHeaderLabels(["Placa", "Tipo", "Hora"])
+        self.tabela_hist_viatura.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+        self.tabela_hist_viatura.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        layout_via.addWidget(self.tabela_hist_viatura)
+
+        # Adiciona os painéis ao layout principal
+        layout_principal.addWidget(painel_militar)
+        layout_principal.addWidget(painel_viatura)
+        
+        # Carrega o histórico inicial
+        self.atualizar_tabelas_historico()
         layout_principal = QHBoxLayout(self.aba_portaria)
         layout_principal.setContentsMargins(20, 20, 20, 20)
         layout_principal.setSpacing(20)
@@ -219,6 +314,7 @@ class MainView(QMainWindow):
             self.txt_militar_id.clear()
             self.txt_obs_militar.clear()
             self.atualizar_dashboard() # Força o dashboard a atualizar os cards na hora
+            self.atualizar_tabelas_historico()
         except Exception as e:
             QMessageBox.critical(self, "Erro", f"Falha ao registrar: {e}") 
   
@@ -241,6 +337,7 @@ class MainView(QMainWindow):
             self.txt_via_motorista.clear()
             self.txt_via_destino.clear()
             self.atualizar_dashboard() # Atualiza os contadores na hora
+            self.atualizar_tabelas_historico()
         except Exception as e:
             QMessageBox.critical(self, "Erro", f"Falha ao registrar: {e}")
 
@@ -257,3 +354,27 @@ class MainView(QMainWindow):
         else:
             self.lbl_efetivo_num.setText("0")
             self.lbl_viaturas_num.setText("0")
+
+    def atualizar_tabelas_historico(self):
+        """Busca os últimos 5 registros de movimentação e exibe nas tabelas."""
+        from app.models.models import RegistroAcesso, RegistroViatura
+
+        # 1. Atualiza histórico de Militares
+        registros_mil = self.om_service.session.query(RegistroAcesso)\
+            .order_by(RegistroAcesso.data_hora.desc()).limit(5).all()
+        
+        self.tabela_hist_militar.setRowCount(len(registros_mil))
+        for i, reg in enumerate(registros_mil):
+            self.tabela_hist_militar.setItem(i, 0, QTableWidgetItem(str(reg.militar_id)[:8] + "..."))
+            self.tabela_hist_militar.setItem(i, 1, QTableWidgetItem(reg.tipo))
+            self.tabela_hist_militar.setItem(i, 2, QTableWidgetItem(reg.data_hora.strftime("%H:%M:%S")))
+
+        # 2. Atualiza histórico de Viaturas
+        registros_via = self.om_service.session.query(RegistroViatura)\
+            .order_by(RegistroViatura.data_hora.desc()).limit(5).all()
+        
+        self.tabela_hist_viatura.setRowCount(len(registros_via))
+        for i, reg in enumerate(registros_via):
+            self.tabela_hist_viatura.setItem(i, 0, QTableWidgetItem(reg.viatura_placa))
+            self.tabela_hist_viatura.setItem(i, 1, QTableWidgetItem(reg.tipo))
+            self.tabela_hist_viatura.setItem(i, 2, QTableWidgetItem(reg.data_hora.strftime("%H:%M:%S")))

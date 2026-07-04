@@ -1,9 +1,14 @@
 import sys
 from PySide6.QtWidgets import QApplication, QMessageBox
+
 from app.database.connection import engine, Base, SessionLocal
+
 from app.repositories.usuario_repository import UsuarioRepository
+
 from app.services.auth_service import AuthService
 from app.services.om_service import OMService
+from app.services.portaria_service import PortariaService
+
 from app.views.login_view import LoginView
 from app.views.main_view import MainView
 
@@ -39,6 +44,7 @@ def main():
     usuario_repo = UsuarioRepository(db_session)
     auth_service = AuthService(usuario_repo)
     om_service = OMService(db_session)
+    portaria_service = PortariaService(db_session)
 
     # Garante a existência da OM ID 1
     inicializar_dados_om_padrao(db_session, om_service)
@@ -48,7 +54,7 @@ def main():
 
     # Instancia as janelas da interface
     login_window = LoginView(auth_service)
-    main_window = MainView(auth_service, om_service)
+    main_window = MainView(auth_service, om_service, portaria_service)
 
     # 4. ORQUESTRACAO DO FLUXO: Conecta o sucesso do login à abertura da janela principal
     def login_sucesso():

@@ -1,3 +1,5 @@
+from app.utils.exception_handler import GlobalExceptionHandler
+
 import sys
 from PySide6.QtWidgets import QApplication, QMessageBox
 
@@ -45,6 +47,10 @@ def main():
     auth_service = AuthService(usuario_repo)
     om_service = OMService(db_session)
     portaria_service = PortariaService(db_session)
+    exception_handler = GlobalExceptionHandler(db_session)
+
+    # Configura o manipulador global de exceções para capturar erros não tratados
+    sys.excepthook = exception_handler.handle_exception
 
     # Garante a existência da OM ID 1
     inicializar_dados_om_padrao(db_session, om_service)

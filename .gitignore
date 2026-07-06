@@ -74,3 +74,6 @@ logs/
 .env
 .env.local
 </markdown> }
+
+# Configurações locais e credenciais
+.env

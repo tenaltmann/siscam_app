@@ -1,11 +1,16 @@
 from app.utils.exception_handler import GlobalExceptionHandler
 
 import sys
+import os
 from PySide6.QtWidgets import QApplication, QMessageBox
+from datetime import date
+from dotenv import load_dotenv
 
 from app.database.connection import engine, Base, SessionLocal
 
 from app.repositories.usuario_repository import UsuarioRepository
+
+from app.core.security import gerar_hash_senha
 
 from app.services.auth_service import AuthService
 from app.services.om_service import OMService
@@ -13,6 +18,12 @@ from app.services.portaria_service import PortariaService
 
 from app.views.login_view import LoginView
 from app.views.main_view import MainView
+
+from tests.conftest import db_session
+
+from app.models.models import UsuarioMilitar, OrganizacaoMilitar
+
+load_dotenv()
 
 def inicializar_banco():
     """Garante a criação das tabelas no banco de dados SQLite."""
@@ -24,18 +35,55 @@ def inicializar_banco():
 
 def inicializar_dados_om_padrao(session, om_service):
     """Garante que exista pelo menos uma OM cadastrada para o Dashboard funcionar."""
-    from app.models.models import OrganizacaoMilitar
     om_existente = session.query(OrganizacaoMilitar).filter(OrganizacaoMilitar.id == 1).first()
     if not om_existente:
         # Cria uma OM padrão fictícia para testes locais se não existir nenhuma
         nova_om = OrganizacaoMilitar(
             id=1,
-            nome_om="OM de Teste",
-            total_militares_internos=0,
-            total_viaturas_internas=0
+            nome="OM de Teste",
+            sigla="OM TST",
+            qtd_militares=0,
+            qtd_viaturas=0
         )
         session.add(nova_om)
         session.commit()
+
+# Recupera apenas as credenciais de ACESSO do .env
+    env_username = os.getenv("ADMIN_USERNAME")
+    env_password = os.getenv("ADMIN_PASSWORD")
+
+    # Validação rigorosa de segurança: garante que são strings e interrompe se forem None
+    if env_username is None or env_password is None:
+        raise ValueError(
+            "ERRO CRÍTICO: As variáveis 'ADMIN_USERNAME' ou 'ADMIN_PASSWORD' "
+            "não foram encontradas no arquivo .env do sistema."
+        )
+
+    # Verifica se já existe um operador com esse username cadastrado
+    usuario_existente = session.query(UsuarioMilitar).filter(UsuarioMilitar.username == env_username).first()
+    if not usuario_existente:
+        novo_usuario = UsuarioMilitar(
+            id="admin-master-id",
+            nome_completo="Administrador do Sistema",
+            
+            # --- DADOS CADASTRAIS (Exigidos pelo banco, colocamos valores padrão) ---
+            rg="00000000-0",                    # Apenas preenchendo o documento obrigatório
+            data_nascimento=date(1990, 1, 1),
+            data_apresentacao=date(2026, 1, 1),
+            organizacao_militar_id="1",
+            possui_veiculo=False,
+            esta_ativo=True,
+            
+            # --- CREDENCIAIS DE LOGIN (O que a tela de login vai validar) ---
+            username=env_username,              # Seu 'admin' vindo do .env
+            password_hash=gerar_hash_senha(env_password), # Sua senha vinda do .env
+            perfil_id=None                      
+        )
+        session.add(novo_usuario)
+        session.commit()
+
+
+    
 
 def main():
     # 1. Inicializa a infraestrutura de dados
